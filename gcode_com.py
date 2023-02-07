@@ -103,6 +103,9 @@ def parse_gcode_lines(lines):
                 cur_layer = int(tokens[0].split(":")[1])
             elif tokens[0].startswith(";MESH"):
                 cur_mesh = tokens[0]
+            elif tokens[0].startswith(";TIME_ELAPSED"):
+                # hack, but TIME_ELAPSED denotes the layer's end, thus also the general end
+                cur_mesh = ""
             else:
                 # the rest of the comments
                 pass
@@ -126,9 +129,9 @@ if __name__ == "__main__":
 
     path = []
     for s in segments_list:
-        # print(s)
-        segment_vis = [s["start"], s["end"]]
-        path.append(segment_vis)
+        if s["mesh"] != "":
+            segment_vis = [s["start"], s["end"]]
+            path.append(segment_vis)
 
     p = trimesh.load_path(path)
     p.show()
