@@ -80,7 +80,7 @@ def parse_gcode_lines(lines):
                 new_segment = {
                     "start": prev_pos,
                     "end": new_pos,
-                    "extrusion": cur_e,
+                    "extrusion": 1,  # cur_e,
                     "region": cur_region,
                     # "layer": cur_layer,
                     "mesh": cur_mesh,
@@ -128,10 +128,25 @@ if __name__ == "__main__":
     segments_list = parse_gcode_lines(lines)
 
     path = []
+    com = [0, 0, 0]
+    accumulated_mass = 0
+
     for s in segments_list:
         if s["mesh"] != "":
             segment_vis = [s["start"], s["end"]]
+            # TODO: should use numpy here. check again
+            segment_com = [(a_i - b_i) / 2 for a_i, b_i in zip(s["start"], s["end"])]
+            com = [
+                (c * accumulated_mass + s_c * s["extrusion"])
+                / (accumulated_mass + s["extrusion"])
+                for c, s_c in zip(com, segment_com)
+            ]
+            accumulated_mass += s["extrusion"]
+
             path.append(segment_vis)
+            print(com)
+
+    print(com)
 
     p = trimesh.load_path(path)
     p.show()
