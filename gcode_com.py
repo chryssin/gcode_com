@@ -1,6 +1,7 @@
 import sys
 import copy
 import trimesh
+import numpy as np
 
 
 def read_gcode_file(filepath):
@@ -14,7 +15,6 @@ def read_gcode_file(filepath):
 
 
 skip_commands = [
-    "M82",  # absolute extrusion mode
     "T0",  # tool
     "M104",  # set hotend temperature
     "M105",  # report temperatures
@@ -28,6 +28,12 @@ skip_commands = [
     "M84",  # disable steppers
     "M190",  # wait for bed temperature
     "G29",  # bed leveling
+    "M204", # set starting acceleration
+    "M205", # set advanced settings
+    "M220", # set feedrate percentage
+    "M221", # set flow percentage (should handle?)
+    "G4", # wait
+    "M420", # bed leveling state
 ]
 
 
@@ -123,30 +129,49 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <GCODE_FILE>")
         exit(1)
+    gcode_file = sys.argv[1]
 
-    lines = read_gcode_file(sys.argv[1])
+    print(f"Reading \"{gcode_file}\"")
+    lines = read_gcode_file(gcode_file)
+    print("Processing gcode lines")
     segments_list = parse_gcode_lines(lines)
 
     path = []
-    com = [0, 0, 0]
+    segment_vertices = []
+    com = np.array([0, 0, 0])
     accumulated_mass = 0
 
+    print("Calculating Center Of Mass")
     for s in segments_list:
         if s["mesh"] != "":
-            segment_vis = [s["start"], s["end"]]
-            # TODO: should use numpy here. check again
-            segment_com = [(a_i - b_i) / 2 for a_i, b_i in zip(s["start"], s["end"])]
-            com = [
-                (c * accumulated_mass + s_c * s["extrusion"])
-                / (accumulated_mass + s["extrusion"])
-                for c, s_c in zip(com, segment_com)
-            ]
-            accumulated_mass += s["extrusion"]
+            # Center of mass calculation
+            segment_start = np.array(s["start"])
+            segment_end = np.array(s["end"])
+            segment_mass = s["extrusion"]
+            segment_com = (segment_start + segment_end) /2
+            com = (com * accumulated_mass + segment_com * segment_mass)/ (accumulated_mass + segment_mass)
+            accumulated_mass += segment_mass
+
+            # gather vertices
+            segment_vertices.append(segment_start)
+            segment_vertices.append(segment_end)
+
+            # gather segments for visualisation
+            segment_vis = [segment_start, segment_end]
+            path.append(segment_vis)
 
             path.append(segment_vis)
-            print(com)
 
-    print(com)
+    # p = trimesh.load_path(path)
+    print("Finding Convex Hull")
+    points = trimesh.points.PointCloud(vertices=segment_vertices)
+    ch = trimesh.convex.convex_hull(segment_vertices, qhull_options='QbB Pp Qt')
 
-    p = trimesh.load_path(path)
-    p.show()
+    # Draw CoM and CH
+    c = trimesh.points.PointCloud(vertices=[com], colors=[[255,0,0]])
+    # c = trimesh.creation.box(extents=[0.3, 0.3, 0.3], transform=trimesh.transformations.translation_matrix(com))
+
+    scene = trimesh.Scene()
+    scene.add_geometry(ch)
+    scene.add_geometry(c)
+    scene.show()
