@@ -131,9 +131,10 @@ if __name__ == "__main__":
         exit(1)
     gcode_file = sys.argv[1]
 
-    print(f"Reading \"{gcode_file}\"")
+    print(f"- Reading \"{gcode_file}\"")
     lines = read_gcode_file(gcode_file)
-    print("Processing gcode lines")
+
+    print(f"- Processing {len(lines)} gcode lines")
     segments_list = parse_gcode_lines(lines)
 
     path = []
@@ -141,37 +142,53 @@ if __name__ == "__main__":
     com = np.array([0, 0, 0])
     accumulated_mass = 0
 
-    print("Calculating Center Of Mass")
+    print("- Calculating Center Of Mass")
     for s in segments_list:
-        if s["mesh"] != "":
-            # Center of mass calculation
-            segment_start = np.array(s["start"])
-            segment_end = np.array(s["end"])
-            segment_mass = s["extrusion"]
-            segment_com = (segment_start + segment_end) /2
-            com = (com * accumulated_mass + segment_com * segment_mass)/ (accumulated_mass + segment_mass)
-            accumulated_mass += segment_mass
+        if s["mesh"] == "":
+            continue
 
-            # gather vertices
-            segment_vertices.append(segment_start)
-            segment_vertices.append(segment_end)
+        # Center of mass calculation
+        segment_start = np.array(s["start"])
+        segment_end = np.array(s["end"])
+        segment_mass = s["extrusion"]
+        segment_com = (segment_start + segment_end) /2
+        com = (com * accumulated_mass + segment_com * segment_mass)/ (accumulated_mass + segment_mass)
+        accumulated_mass += segment_mass
 
-            # gather segments for visualisation
-            segment_vis = [segment_start, segment_end]
-            path.append(segment_vis)
+        # gather vertices
+        segment_vertices.append(segment_start)
+        segment_vertices.append(segment_end)
 
-            path.append(segment_vis)
+        # gather segments for visualisation
+        segment_vis = [segment_start, segment_end]
+        path.append(segment_vis)
+
+        path.append(segment_vis)
 
     # p = trimesh.load_path(path)
-    print("Finding Convex Hull")
+    print("- Finding Convex Hull")
     points = trimesh.points.PointCloud(vertices=segment_vertices)
     ch = trimesh.convex.convex_hull(segment_vertices, qhull_options='QbB Pp Qt')
+    aabb_center = (points.bounds[1]+points.bounds[0])/2
+    print("-------------------------------------")
+    print("Axis Aligned Bounding Box dimensions:")
+    print(f"X: {points.bounds[1][0]-points.bounds[0][0]:.2f}")
+    print(f"Y: {points.bounds[1][1]-points.bounds[0][1]:.2f}")
+    print(f"Z: {points.bounds[1][2]-points.bounds[0][2]:.2f}")
+    print("-------------------------------------")
+    print(f"CoM distances from AABB bounds:")
+    print(f"X-: {com[0]-points.bounds[0][0]:.2f} X+: {points.bounds[1][0] - com[0]:.2f}")
+    print(f"Y-: {com[1]-points.bounds[0][1]:.2f} Y+: {points.bounds[1][1] - com[1]:.2f}")
+    print(f"Z-: {com[2]-points.bounds[0][2]:.2f} Z+: {points.bounds[1][2] - com[2]:.2f}")
 
     # Draw CoM and CH
-    c = trimesh.points.PointCloud(vertices=[com], colors=[[255,0,0]])
+    c = trimesh.points.PointCloud(vertices=[com,aabb_center], colors=[[255,0,0], [0,200,0]])
     # c = trimesh.creation.box(extents=[0.3, 0.3, 0.3], transform=trimesh.transformations.translation_matrix(com))
+
+    ch.visual.face_colors = [200, 200, 250, 100]
 
     scene = trimesh.Scene()
     scene.add_geometry(ch)
     scene.add_geometry(c)
+    scene.add_geometry(trimesh.creation.axis(origin_size = (points.bounds[1][0]-points.bounds[0][0])/10, transform =trimesh.transformations.translation_matrix(points.bounds[0])))
     scene.show()
