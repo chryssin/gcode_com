@@ -28,12 +28,12 @@ skip_commands = [
     "M84",  # disable steppers
     "M190",  # wait for bed temperature
     "G29",  # bed leveling
-    "M204", # set starting acceleration
-    "M205", # set advanced settings
-    "M220", # set feedrate percentage
-    "M221", # set flow percentage (should handle?)
-    "G4", # wait
-    "M420", # bed leveling state
+    "M204",  # set starting acceleration
+    "M205",  # set advanced settings
+    "M220",  # set feedrate percentage
+    "M221",  # set flow percentage (should handle?)
+    "G4",  # wait
+    "M420",  # bed leveling state
 ]
 
 
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         exit(1)
     gcode_file = sys.argv[1]
 
-    print(f"- Reading \"{gcode_file}\"")
+    print(f'- Reading "{gcode_file}"')
     lines = read_gcode_file(gcode_file)
 
     print(f"- Processing {len(lines)} gcode lines")
@@ -151,8 +151,10 @@ if __name__ == "__main__":
         segment_start = np.array(s["start"])
         segment_end = np.array(s["end"])
         segment_mass = s["extrusion"]
-        segment_com = (segment_start + segment_end) /2
-        com = (com * accumulated_mass + segment_com * segment_mass)/ (accumulated_mass + segment_mass)
+        segment_com = (segment_start + segment_end) / 2
+        com = (com * accumulated_mass + segment_com * segment_mass) / (
+            accumulated_mass + segment_mass
+        )
         accumulated_mass += segment_mass
 
         # gather vertices
@@ -168,8 +170,8 @@ if __name__ == "__main__":
     # p = trimesh.load_path(path)
     print("- Finding Convex Hull")
     points = trimesh.points.PointCloud(vertices=segment_vertices)
-    ch = trimesh.convex.convex_hull(segment_vertices, qhull_options='QbB Pp Qt')
-    aabb_center = (points.bounds[1]+points.bounds[0])/2
+    ch = trimesh.convex.convex_hull(segment_vertices, qhull_options="QbB Pp Qt")
+    aabb_center = (points.bounds[1] + points.bounds[0]) / 2
     print("-------------------------------------")
     print("Axis Aligned Bounding Box dimensions:")
     print(f"X: {points.bounds[1][0]-points.bounds[0][0]:.2f}")
@@ -177,18 +179,41 @@ if __name__ == "__main__":
     print(f"Z: {points.bounds[1][2]-points.bounds[0][2]:.2f}")
     print("-------------------------------------")
     print(f"CoM distances from AABB bounds:")
-    print(f"X-: {com[0]-points.bounds[0][0]:.2f} X+: {points.bounds[1][0] - com[0]:.2f}")
-    print(f"Y-: {com[1]-points.bounds[0][1]:.2f} Y+: {points.bounds[1][1] - com[1]:.2f}")
-    print(f"Z-: {com[2]-points.bounds[0][2]:.2f} Z+: {points.bounds[1][2] - com[2]:.2f}")
+    print(
+        f"X-: {com[0]-points.bounds[0][0]:.2f}, X+: {points.bounds[1][0] - com[0]:.2f}"
+    )
+    print(
+        f"Y-: {com[1]-points.bounds[0][1]:.2f}, Y+: {points.bounds[1][1] - com[1]:.2f}"
+    )
+    print(
+        f"Z-: {com[2]-points.bounds[0][2]:.2f}, Z+: {points.bounds[1][2] - com[2]:.2f}"
+    )
 
     # Draw CoM and CH
-    c = trimesh.points.PointCloud(vertices=[com,aabb_center], colors=[[255,0,0], [0,200,0]])
-    # c = trimesh.creation.box(extents=[0.3, 0.3, 0.3], transform=trimesh.transformations.translation_matrix(com))
-
+    c = trimesh.points.PointCloud(
+        vertices=[com, aabb_center], colors=[[255, 0, 0], [0, 200, 0]]
+    )
     ch.visual.face_colors = [200, 200, 250, 100]
+
+    ch = trimesh.Trimesh(
+        *trimesh.remesh.subdivide_to_size(ch.vertices, ch.faces, ch.scale / 40)
+    )
+    distances = []
+    for v in ch.vertices:
+        dist = np.linalg.norm(v - com)
+        distances.append(
+            1 / (dist ** 2)
+        )  # use square to make the coloring more intense
+
+    ch.visual.vertex_colors = trimesh.visual.interpolate(distances, color_map="turbo")
 
     scene = trimesh.Scene()
     scene.add_geometry(ch)
     scene.add_geometry(c)
-    scene.add_geometry(trimesh.creation.axis(origin_size = (points.bounds[1][0]-points.bounds[0][0])/10, transform =trimesh.transformations.translation_matrix(points.bounds[0])))
+    scene.add_geometry(
+        trimesh.creation.axis(
+            origin_size=(points.bounds[1][0] - points.bounds[0][0]) / 10,
+            transform=trimesh.transformations.translation_matrix(points.bounds[0]),
+        )
+    )
     scene.show()
