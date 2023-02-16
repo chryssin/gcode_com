@@ -4,8 +4,8 @@ The purpose of this script is to parse a `.gcode` file and find the Center of Ma
 
 Why you may want to find the center of mass:
 1. To check if 3d printed dice will be fair. The CoM should be to the center of the die.
-2. To find where to tie a string to an object, to hang it so it stays vertical.
-3. To find if a spining object will be balanced. eg. gears, clock hands etc
+2. To find where will you tie a string to an object, to hang it so it stays vertical.
+3. To find if a rotating object will be balanced. eg. gears, clock hands etc
 4. To 3d print a balancing egg. That was my purpose.
 
 This script:
@@ -36,15 +36,22 @@ Y-: 15.22, Y+: 14.79
 Z-: 15.04, Z+: 32.46
 ```
 As we see both by the numbers and the rendering, the CoM on this Benchy lies to the front and bottom of the boat, but it is also slightly moved to its left side.
-It also seems that it will be more stable if laid on its side rather than standing (The darkest points exist on its left side).
+
+So we could say that it will be more stable if laid on its side rather than standing (The darkest points exist on its left side).
+
+However it is not really true that the darkest region indicates the more stable orientation. It just indicates the orientation that the model has the minimum Potential Energy. A dark region indicates a local minimum for the Potential Energy.Stability has to do with how easily this local minimum could be escaped, so it seems to be a more complex subject.
 
 ![benchy balance 1](images/benchy_balance.png)
 ![benchy balance 2](images/benchy_balance_2.png)
 
+Indeed it seems that the cubic infill has placed more material to the left of the boat.
+
+![benchy infill](images/benchy_infill.png)
+
 ## Problems
 
 - The actual material deposition may be different than what we calculate by checking the E values of the G1 comamnds.
-- The object's bounding box is calculated by checking the gcode vertices. These vertices are offset to the interior of the object, during the slicing process, in order to maintain the real object's dimensions. So we expect the bounding box to be slightly smaller thatn the printed object, smaller by:
+- The object's bounding box is calculated by checking the gcode points. These points are offset to the interior of the object, during the slicing process, in order to maintain the real object's dimensions. So we expect the bounding box to be slightly smaller than the printed object, smaller by:
   - nozzle_diameter along the horizontal directions
   - initial_layer_height at the bottom of the object
   - a value less than layer_height at the top of the object.
