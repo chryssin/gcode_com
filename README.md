@@ -39,7 +39,7 @@ As we see both by the numbers and the rendering, the CoM on this Benchy lies to 
 
 So we could say that it will be more stable if laid on its side rather than standing (The darkest points exist on its left side).
 
-However it is not really true that the darkest region indicates the more stable orientation. It just indicates the orientation that the model has the minimum Potential Energy. A dark region indicates a local minimum for the Potential Energy.Stability has to do with how easily this local minimum could be escaped, so it seems to be a more complex subject.
+However it is not really true that the darkest region indicates the more stable orientation. It just indicates the orientation that the model has the minimum Potential Energy. A dark region indicates a local minimum for the Potential Energy. Stability has to do with how easily this local minimum could be escaped, so it seems to be a more complex subject.
 
 ![benchy balance 1](images/benchy_balance.png)
 ![benchy balance 2](images/benchy_balance_2.png)
@@ -50,8 +50,8 @@ Indeed it seems that the cubic infill has placed more material to the left of th
 
 ## Problems
 
-- The actual material deposition may be different than what we calculate by checking the E values of the G1 comamnds.
-- The object's bounding box is calculated by checking the gcode points. These points are offset to the interior of the object, during the slicing process, in order to maintain the real object's dimensions. So we expect the bounding box to be slightly smaller than the printed object, smaller by:
+- The actual material deposition may be different than what we calculate by checking the E values of the G1 commands.
+- The object's bounding box is calculated by checking the gcode points. These points are offset to the interior of the object, during the slicing process, in order to maintain the real object's dimensions. So we expect the bounding box and CH to be slightly smaller than the printed object, smaller by:
   - nozzle_diameter along the horizontal directions
   - initial_layer_height at the bottom of the object
   - a value less than layer_height at the top of the object.
