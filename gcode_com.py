@@ -4,7 +4,7 @@ import trimesh
 import numpy as np
 
 
-def read_gcode_file(filepath):
+def read_file(filepath):
     try:
         with open(filepath) as file:
             lines = [line.rstrip() for line in file]
@@ -131,13 +131,15 @@ if __name__ == "__main__":
         exit(1)
     gcode_file = sys.argv[1]
 
+    show_gcode = False
+
     print(f'- Reading "{gcode_file}"')
-    lines = read_gcode_file(gcode_file)
+    lines = read_file(gcode_file)
 
     print(f"- Processing {len(lines)} gcode lines")
     segments_list = parse_gcode_lines(lines)
 
-    path = []
+    gcode_path = []
     segment_vertices = []
     com = np.array([0, 0, 0])
     accumulated_mass = 0
@@ -163,11 +165,14 @@ if __name__ == "__main__":
 
         # gather segments for visualisation
         segment_vis = [segment_start, segment_end]
-        path.append(segment_vis)
+        gcode_path.append(segment_vis)
 
-        path.append(segment_vis)
+        gcode_path.append(segment_vis)
 
-    # p = trimesh.load_path(path)
+    if show_gcode is True:
+        gcode_lines = trimesh.load_path(gcode_path)
+        # gcode_lines.show()
+
     print("- Finding Convex Hull")
     points = trimesh.points.PointCloud(vertices=segment_vertices)
     ch = trimesh.convex.convex_hull(segment_vertices, qhull_options="QbB Pp Qt")
@@ -206,6 +211,7 @@ if __name__ == "__main__":
         )  # use square to make the coloring more intense
 
     ch.visual.vertex_colors = trimesh.visual.interpolate(distances, color_map="turbo")
+    ch.visual.vertex_colors[:, 3] = 200
 
     scene = trimesh.Scene()
     scene.add_geometry(ch)
@@ -216,4 +222,6 @@ if __name__ == "__main__":
             transform=trimesh.transformations.translation_matrix(points.bounds[0]),
         )
     )
+    if show_gcode is True:
+        scene.add_geometry(gcode_lines)
     scene.show()
